@@ -3,27 +3,32 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 const SessionContext = createContext()
 
 export const SessionProvider = ({ children }) => {
-  const [session, setSession] = useState(null)
+  const [session, setSession] = useState(() => {
+    const storedSession = window.localStorage.getItem('session')
+    return storedSession ? JSON.parse(storedSession) : null
+  })
 
   useEffect(() => {
-    // Deverá consumir as informações da session
-    // que ficarão armazenadas no accessToken e
-    // disponibilizar elas no context
+    if (session) {
+      window.localStorage.setItem('session', JSON.stringify(session))
+    } else {
+      window.localStorage.removeItem('session')
+    }
+  }, [session])
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSession({
-      tenant: {
-        id: '1',
-        name: 'Minha Comarca',
-        logo: 'base64...',
-      },
-      user: {
-        name: 'Marina da Silva',
-      },
-    })
-  }, [setSession])
+  const login = (payload) => {
+    setSession(payload)
+  }
 
-  return <SessionContext.Provider value={{ session }}>{children}</SessionContext.Provider>
+  const logout = () => {
+    setSession(null)
+  }
+
+  return (
+    <SessionContext.Provider value={{ session, login, logout }}>
+      {children}
+    </SessionContext.Provider>
+  )
 }
 
 export const useSession = () => {
