@@ -2,11 +2,25 @@ import { ApiError } from './ApiError'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
+function getStoredToken() {
+  try {
+    const storedSession = localStorage.getItem('session')
+    if (storedSession) {
+      const parsedSession = JSON.parse(storedSession)
+      if (parsedSession?.token) {
+        return parsedSession.token
+      }
+    }
+  } catch {}
+
+  return localStorage.getItem('token') || ''
+}
+
 async function request(path, { method = 'GET', body, headers = {}, auth = false } = {}) {
   const config = {
     method,
     headers: {
-      ...(auth ? { Authorization: `Bearer ${localStorage.getItem('token') || ''}` } : {}),
+      ...(auth ? { Authorization: `${getStoredToken()}` } : {}),
       ...headers,
     },
   }

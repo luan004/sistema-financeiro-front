@@ -4,6 +4,7 @@ import { useSession } from './context/SessionContext'
 import AppLayout from './components/layout/AppLayout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import Accounts from './pages/Accounts'
 import Movements from './pages/Movements'
 import NotFound from './pages/NotFound'
 
@@ -32,6 +33,7 @@ const AppRouter = () => {
       >
         <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="accounts" element={<Accounts />} />
         <Route path="movements" element={<Movements />} />
       </Route>
       <Route path="*" element={<NotFound />} />
