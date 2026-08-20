@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateDisplay } from '@/components/common/DateDisplay'
 import { api } from '../services/api'
 import { useSession } from '../context/SessionContext'
 
@@ -13,14 +14,9 @@ export default function Accounts() {
   const { session } = useSession()
   const [accounts, setAccounts] = useState([])
   const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [createDescription, setCreateDescription] = useState('')
-  const [createLoading, setCreateLoading] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
-  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     if (!session?.token) {
@@ -32,56 +28,34 @@ export default function Accounts() {
   }, [session, navigate])
 
   const loadAccounts = async (nextPage = 1) => {
-    setLoading(true)
-    setError('')
-
     try {
       const data = await api.get(`/accounts?page=${nextPage}&limit=${PAGE_SIZE}`, { auth: true })
       const list = Array.isArray(data) ? data : []
       setAccounts(list)
-      setHasMore(list.length === PAGE_SIZE)
       setPage(nextPage)
-    } catch (err) {
-      setError(err.detail || 'Não foi possível carregar as contas.')
-    } finally {
-      setLoading(false)
-    }
+    } catch {}
   }
 
   const handleCreate = async (event) => {
     event.preventDefault()
     if (!createDescription.trim()) return
 
-    setCreateLoading(true)
-    setError('')
-
     try {
       await api.post('/accounts', { description: createDescription.trim() }, { auth: true })
       setCreateDescription('')
       setCreateOpen(false)
       await loadAccounts(1)
-    } catch (err) {
-      setError(err.detail || 'Não foi possível criar a conta.')
-    } finally {
-      setCreateLoading(false)
-    }
+    } catch {}
   }
 
   const handleDelete = async () => {
     if (!deleteTarget) return
 
-    setDeleteLoading(true)
-    setError('')
-
     try {
       await api.delete(`/accounts/${deleteTarget.id}`, { auth: true })
       setDeleteTarget(null)
       await loadAccounts(1)
-    } catch (err) {
-      setError(err.detail || 'Não foi possível excluir a conta.')
-    } finally {
-      setDeleteLoading(false)
-    }
+    } catch {}
   }
 
   const summary = useMemo(() => {
@@ -98,17 +72,13 @@ export default function Accounts() {
         <Button onClick={() => setCreateOpen(true)}>Nova conta</Button>
       </div>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-
       <Card>
         <CardHeader>
           <CardTitle>Lista de contas</CardTitle>
           <CardDescription>{summary}</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <p className="text-sm text-slate-500">Carregando contas...</p>
-          ) : accounts.length === 0 ? (
+          {accounts.length === 0 ? (
             <p className="text-sm text-slate-500">Nenhuma conta cadastrada.</p>
           ) : (
             <div className="overflow-x-auto">
@@ -124,7 +94,7 @@ export default function Accounts() {
                   {accounts.map((account) => (
                     <tr key={account.id} className="border-b last:border-0">
                       <td className="py-3 pr-4">{account.description}</td>
-                      <td className="py-3 pr-4">{account.createdAt}</td>
+                      <td className="py-3 pr-4"><DateDisplay date={account.createdAt} /></td>
                       <td className="py-3 text-right">
                         <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(account)}>
                           Excluir
@@ -138,11 +108,11 @@ export default function Accounts() {
           )}
 
           <div className="mt-4 flex items-center justify-between gap-3">
-            <Button variant="outline" size="sm" disabled={page <= 1 || loading} onClick={() => loadAccounts(page - 1)}>
+            <Button variant="outline" size="sm" onClick={() => page > 1 ? loadAccounts(page - 1) : loadAccounts(page)}>
               Anterior
             </Button>
             <span className="text-sm text-slate-500">Página {page}</span>
-            <Button variant="outline" size="sm" disabled={!hasMore || loading} onClick={() => loadAccounts(page + 1)}>
+            <Button variant="outline" size="sm" onClick={() => loadAccounts(page + 1)}>
               Próxima
             </Button>
           </div>
@@ -162,11 +132,11 @@ export default function Accounts() {
                 required
               />
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={createLoading}>
+                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={createLoading}>
-                  {createLoading ? 'Criando...' : 'Criar conta'}
+                <Button type="submit">
+                  Criar conta
                 </Button>
               </div>
             </form>
@@ -182,11 +152,11 @@ export default function Accounts() {
               Tem certeza que deseja excluir a conta <span className="font-semibold">{deleteTarget.description}</span>?
             </p>
             <div className="mt-4 flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}>
+              <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
                 Cancelar
               </Button>
-              <Button type="button" variant="destructive" onClick={handleDelete} disabled={deleteLoading}>
-                {deleteLoading ? 'Excluindo...' : 'Confirmar exclusão'}
+              <Button type="button" variant="destructive" onClick={handleDelete}>
+                Confirmar exclusão
               </Button>
             </div>
           </div>

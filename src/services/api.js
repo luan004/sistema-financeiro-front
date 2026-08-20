@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import { ApiError } from './ApiError'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
@@ -45,6 +46,7 @@ async function request(path, { method = 'GET', body, headers = {}, auth = false 
       ? data
       : data?.detail || 'Falha desconhecida'
 
+    toast.error(detail)
     throw new ApiError(detail, data)
   }
 

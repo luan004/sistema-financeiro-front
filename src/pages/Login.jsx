@@ -26,8 +26,6 @@ export default function Login() {
   const { session, login } = useSession()
   const [formData, setFormData] = useState({ mail: '', password: '' })
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
 
   useEffect(() => {
     if (session?.token) {
@@ -38,8 +36,6 @@ export default function Login() {
   const handleSubmit = async (event) => {
     event.preventDefault()
     setLoading(true)
-    setError('')
-    setSuccess('')
 
     try {
       const data = await api.post('/login', {
@@ -53,11 +49,8 @@ export default function Login() {
         mail: formData.mail,
       })
 
-      setSuccess('Login realizado com sucesso.')
       setFormData({ mail: '', password: '' })
       navigate('/dashboard')
-    } catch (err) {
-      setError(err.detail)
     } finally {
       setLoading(false)
     }
@@ -101,9 +94,6 @@ export default function Login() {
                   />
                 </FieldContent>
               </Field>
-
-              {error ? <p className="text-sm text-red-600">{error}</p> : null}
-              {success ? <p className="text-sm text-emerald-600">{success}</p> : null}
 
               <Button type="submit" disabled={loading} className="w-full">
                 {loading ? 'Entrando...' : 'Entrar'}
