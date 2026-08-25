@@ -41,7 +41,7 @@ function SidebarNavigation() {
   }
 
   return (
-    <div className="mx-auto flex min-h-svh w-full max-w-7xl border-x">
+    <div className="mx-auto flex h-svh w-full max-w-[100rem] overflow-hidden border-x">
       <Sidebar collapsible={isMobile ? 'offcanvas' : 'none'} className={isMobile ? '' : 'border-e'}>
         <SidebarHeader>
           <span className="flex h-9 items-center px-2 text-sm font-semibold">Sistema Financeiro</span>
@@ -95,12 +95,12 @@ function SidebarNavigation() {
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset>
+      <SidebarInset className="overflow-hidden">
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1 md:hidden" />
           <span className="text-sm font-medium">{navItems.find((item) => item.to === pathname)?.label || ''}</span>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 p-4 md:p-6">
+        <main className="mx-auto w-full min-h-0 flex-1 overflow-y-auto p-4">
           <Outlet />
         </main>
       </SidebarInset>

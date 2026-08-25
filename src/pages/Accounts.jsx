@@ -7,7 +7,7 @@ import { DateDisplay } from '@/components/common/DateDisplay'
 import { api } from '../services/api'
 import { useSession } from '../context/SessionContext'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 8
 
 export default function Accounts() {
   const navigate = useNavigate()
@@ -108,11 +108,11 @@ export default function Accounts() {
           )}
 
           <div className="mt-4 flex items-center justify-between gap-3">
-            <Button variant="outline" size="sm" onClick={() => page > 1 ? loadAccounts(page - 1) : loadAccounts(page)}>
+            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => loadAccounts(page - 1)}>
               Anterior
             </Button>
             <span className="text-sm text-slate-500">Página {page}</span>
-            <Button variant="outline" size="sm" onClick={() => loadAccounts(page + 1)}>
+            <Button variant="outline" size="sm" disabled={accounts.length < PAGE_SIZE} onClick={() => loadAccounts(page + 1)}>
               Próxima
             </Button>
           </div>
