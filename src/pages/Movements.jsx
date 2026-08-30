@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DateDisplay } from '@/components/common/DateDisplay'
+import { DataTable } from '@/components/common/DataTable'
 import { api } from '../services/api'
 import { useSession } from '../context/SessionContext'
 
@@ -16,10 +16,13 @@ export default function Movements() {
   const navigate = useNavigate()
   const { session } = useSession()
   const [movements, setMovements] = useState([])
+  const [accounts, setAccounts] = useState([])
   const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
   const [createDescription, setCreateDescription] = useState('')
   const [createAmount, setCreateAmount] = useState('')
+  const [createAccountId, setCreateAccountId] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
@@ -29,25 +32,41 @@ export default function Movements() {
     }
 
     loadMovements(page)
+    loadAccounts()
   }, [session, navigate])
 
   const loadMovements = async (nextPage = 1) => {
+    setLoading(true)
     try {
       const data = await api.get(`/movements?page=${nextPage}&limit=${PAGE_SIZE}`, { auth: true })
       const list = Array.isArray(data) ? data : []
       setMovements(list)
       setPage(nextPage)
+    } catch {} finally {
+      setLoading(false)
+    }
+  }
+
+  const loadAccounts = async () => {
+    try {
+      const data = await api.get('/accounts?page=1&limit=100', { auth: true })
+      setAccounts(Array.isArray(data) ? data : [])
     } catch {}
   }
 
   const handleCreate = async (event) => {
     event.preventDefault()
-    if (!createDescription.trim() || createAmount === '') return
+    if (!createDescription.trim() || createAmount === '' || !createAccountId) return
 
     try {
-      await api.post('/movements', { description: createDescription.trim(), amount: Number(createAmount) }, { auth: true })
+      await api.post('/movements', {
+        accountId: Number(createAccountId),
+        description: createDescription.trim(),
+        amount: Number(createAmount),
+      }, { auth: true })
       setCreateDescription('')
       setCreateAmount('')
+      setCreateAccountId('')
       setCreateOpen(false)
       await loadMovements(1)
     } catch {}
@@ -77,56 +96,41 @@ export default function Movements() {
         <Button onClick={() => setCreateOpen(true)}>Nova movimentação</Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de movimentações</CardTitle>
-          <CardDescription>{summary}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {movements.length === 0 ? (
-            <p className="text-sm text-slate-500">Nenhuma movimentação registrada.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-slate-500">
-                    <th className="py-2 pr-4">Descrição</th>
-                    <th className="py-2 pr-4">Valor</th>
-                    <th className="py-2 pr-4">Criada em</th>
-                    <th className="py-2 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {movements.map((movement) => (
-                    <tr key={movement.id} className="border-b last:border-0">
-                      <td className="py-3 pr-4">{movement.description}</td>
-                      <td className={`py-3 pr-4 ${movement.amount < 0 ? 'text-destructive' : ''}`}>
-                        {formatAmount(movement.amount)}
-                      </td>
-                      <td className="py-3 pr-4"><DateDisplay date={movement.createdAt} /></td>
-                      <td className="py-3 text-right">
-                        <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(movement)}>
-                          Excluir
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => loadMovements(page - 1)}>
-              Anterior
-            </Button>
-            <span className="text-sm text-slate-500">Página {page}</span>
-            <Button variant="outline" size="sm" disabled={movements.length < PAGE_SIZE} onClick={() => loadMovements(page + 1)}>
-              Próxima
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <DataTable
+        title="Lista de movimentações"
+        description={summary}
+        columns={[
+          { key: 'description', header: 'Descrição' },
+          { key: 'account', header: 'Conta', render: (movement) => movement.account?.description || '-' },
+          {
+            key: 'amount',
+            header: 'Valor',
+            render: (movement) => (
+              <span className={movement.amount < 0 ? 'text-destructive' : ''}>
+                {formatAmount(movement.amount)}
+              </span>
+            ),
+          },
+          { key: 'createdAt', header: 'Criada em', render: (movement) => <DateDisplay date={movement.createdAt} /> },
+          {
+            key: 'actions',
+            header: 'Ações',
+            align: 'right',
+            render: (movement) => (
+              <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(movement)}>
+                Excluir
+              </Button>
+            ),
+          },
+        ]}
+        data={movements}
+        loading={loading}
+        page={page}
+        pageSize={PAGE_SIZE}
+        hasNext={movements.length >= PAGE_SIZE}
+        emptyMessage="Nenhuma movimentação registrada."
+        onPageChange={loadMovements}
+      />
 
       {createOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
@@ -134,6 +138,17 @@ export default function Movements() {
             <h2 className="text-lg font-semibold">Nova movimentação</h2>
             <p className="mt-1 text-sm text-slate-500">Informe a descrição e o valor. Use valores negativos para saídas.</p>
             <form onSubmit={handleCreate} className="mt-4 space-y-4">
+              <select
+                value={createAccountId}
+                onChange={(event) => setCreateAccountId(event.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                required
+              >
+                <option value="">Selecione uma conta</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>{account.description}</option>
+                ))}
+              </select>
               <Input
                 value={createDescription}
                 onChange={(event) => setCreateDescription(event.target.value)}
@@ -152,7 +167,7 @@ export default function Movements() {
                 <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit">
+                <Button type="submit" disabled={accounts.length === 0}>
                   Criar movimentação
                 </Button>
               </div>

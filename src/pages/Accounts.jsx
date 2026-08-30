@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DateDisplay } from '@/components/common/DateDisplay'
+import { DataTable } from '@/components/common/DataTable'
 import { api } from '../services/api'
 import { useSession } from '../context/SessionContext'
 
@@ -14,6 +14,7 @@ export default function Accounts() {
   const { session } = useSession()
   const [accounts, setAccounts] = useState([])
   const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
   const [createDescription, setCreateDescription] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -28,12 +29,15 @@ export default function Accounts() {
   }, [session, navigate])
 
   const loadAccounts = async (nextPage = 1) => {
+    setLoading(true)
     try {
       const data = await api.get(`/accounts?page=${nextPage}&limit=${PAGE_SIZE}`, { auth: true })
       const list = Array.isArray(data) ? data : []
       setAccounts(list)
       setPage(nextPage)
-    } catch {}
+    } catch {} finally {
+      setLoading(false)
+    }
   }
 
   const handleCreate = async (event) => {
@@ -72,52 +76,31 @@ export default function Accounts() {
         <Button onClick={() => setCreateOpen(true)}>Nova conta</Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de contas</CardTitle>
-          <CardDescription>{summary}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {accounts.length === 0 ? (
-            <p className="text-sm text-slate-500">Nenhuma conta cadastrada.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-slate-500">
-                    <th className="py-2 pr-4">Descrição</th>
-                    <th className="py-2 pr-4">Criada em</th>
-                    <th className="py-2 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounts.map((account) => (
-                    <tr key={account.id} className="border-b last:border-0">
-                      <td className="py-3 pr-4">{account.description}</td>
-                      <td className="py-3 pr-4"><DateDisplay date={account.createdAt} /></td>
-                      <td className="py-3 text-right">
-                        <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(account)}>
-                          Excluir
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => loadAccounts(page - 1)}>
-              Anterior
-            </Button>
-            <span className="text-sm text-slate-500">Página {page}</span>
-            <Button variant="outline" size="sm" disabled={accounts.length < PAGE_SIZE} onClick={() => loadAccounts(page + 1)}>
-              Próxima
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <DataTable
+        title="Lista de contas"
+        description={summary}
+        columns={[
+          { key: 'description', header: 'Descrição' },
+          { key: 'createdAt', header: 'Criada em', render: (account) => <DateDisplay date={account.createdAt} /> },
+          {
+            key: 'actions',
+            header: 'Ações',
+            align: 'right',
+            render: (account) => (
+              <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(account)}>
+                Excluir
+              </Button>
+            ),
+          },
+        ]}
+        data={accounts}
+        loading={loading}
+        page={page}
+        pageSize={PAGE_SIZE}
+        hasNext={accounts.length >= PAGE_SIZE}
+        emptyMessage="Nenhuma conta cadastrada."
+        onPageChange={loadAccounts}
+      />
 
       {createOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
