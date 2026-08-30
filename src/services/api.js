@@ -3,6 +3,8 @@ import { ApiError } from './ApiError'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
+const AUTH_EXCLUDED_PATHS = ['/login']
+
 function getStoredToken() {
   try {
     const storedSession = localStorage.getItem('session')
@@ -17,11 +19,15 @@ function getStoredToken() {
   return localStorage.getItem('token') || ''
 }
 
-async function request(path, { method = 'GET', body, headers = {}, auth = false } = {}) {
+function requiresAuth(path) {
+  return !AUTH_EXCLUDED_PATHS.some((excluded) => path.startsWith(excluded))
+}
+
+async function request(path, { method = 'GET', body, headers = {} } = {}) {
   const config = {
     method,
     headers: {
-      ...(auth ? { Authorization: `${getStoredToken()}` } : {}),
+      ...(requiresAuth(path) ? { Authorization: getStoredToken() } : {}),
       ...headers,
     },
   }

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DateDisplay } from '@/components/common/DateDisplay'
 import { DataTable } from '@/components/common/DataTable'
-import { api } from '../services/api'
+import { AccountService } from '../services/AccountService'
 import { useSession } from '../context/SessionContext'
 
 const PAGE_SIZE = 8
@@ -31,7 +31,7 @@ export default function Accounts() {
   const loadAccounts = async (nextPage = 1) => {
     setLoading(true)
     try {
-      const data = await api.get(`/accounts?page=${nextPage}&limit=${PAGE_SIZE}`, { auth: true })
+      const data = await AccountService.list({ page: nextPage, limit: PAGE_SIZE })
       const list = Array.isArray(data) ? data : []
       setAccounts(list)
       setPage(nextPage)
@@ -45,7 +45,7 @@ export default function Accounts() {
     if (!createDescription.trim()) return
 
     try {
-      await api.post('/accounts', { description: createDescription.trim() }, { auth: true })
+      await AccountService.create(createDescription.trim())
       setCreateDescription('')
       setCreateOpen(false)
       await loadAccounts(1)
@@ -56,7 +56,7 @@ export default function Accounts() {
     if (!deleteTarget) return
 
     try {
-      await api.delete(`/accounts/${deleteTarget.id}`, { auth: true })
+      await AccountService.remove(deleteTarget.id)
       setDeleteTarget(null)
       await loadAccounts(1)
     } catch {}

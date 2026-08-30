@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DateDisplay } from '@/components/common/DateDisplay'
 import { DataTable } from '@/components/common/DataTable'
-import { api } from '../services/api'
+import { MovementService } from '../services/MovementService'
 import { useSession } from '../context/SessionContext'
 
 const PAGE_SIZE = 8
@@ -38,7 +38,7 @@ export default function Movements() {
   const loadMovements = async (nextPage = 1) => {
     setLoading(true)
     try {
-      const data = await api.get(`/movements?page=${nextPage}&limit=${PAGE_SIZE}`, { auth: true })
+      const data = await MovementService.list({ page: nextPage, limit: PAGE_SIZE })
       const list = Array.isArray(data) ? data : []
       setMovements(list)
       setPage(nextPage)
@@ -49,7 +49,7 @@ export default function Movements() {
 
   const loadAccounts = async () => {
     try {
-      const data = await api.get('/accounts?page=1&limit=100', { auth: true })
+      const data = await MovementService.listAccounts()
       setAccounts(Array.isArray(data) ? data : [])
     } catch {}
   }
@@ -59,11 +59,11 @@ export default function Movements() {
     if (!createDescription.trim() || createAmount === '' || !createAccountId) return
 
     try {
-      await api.post('/movements', {
+      await MovementService.create({
         accountId: Number(createAccountId),
         description: createDescription.trim(),
         amount: Number(createAmount),
-      }, { auth: true })
+      })
       setCreateDescription('')
       setCreateAmount('')
       setCreateAccountId('')
@@ -76,7 +76,7 @@ export default function Movements() {
     if (!deleteTarget) return
 
     try {
-      await api.delete(`/movements/${deleteTarget.id}`, { auth: true })
+      await MovementService.remove(deleteTarget.id)
       setDeleteTarget(null)
       await loadMovements(1)
     } catch {}
