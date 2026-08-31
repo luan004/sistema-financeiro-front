@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { NumericFormat } from 'react-number-format'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { DateDisplay } from '@/components/common/DateDisplay'
-import { DataTable } from '@/components/common/DataTable'
-import { MovementService } from '../services/MovementService'
+import { api } from '../services/api'
 import { useSession } from '../context/SessionContext'
 
 const PAGE_SIZE = 8
@@ -18,7 +20,6 @@ export default function Movements() {
   const [movements, setMovements] = useState([])
   const [accounts, setAccounts] = useState([])
   const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
   const [createDescription, setCreateDescription] = useState('')
   const [createAmount, setCreateAmount] = useState('')
@@ -31,26 +32,24 @@ export default function Movements() {
       return
     }
 
-    loadMovements(page)
     loadAccounts()
+    loadMovements(page)
   }, [session, navigate])
-
-  const loadMovements = async (nextPage = 1) => {
-    setLoading(true)
-    try {
-      const data = await MovementService.list({ page: nextPage, limit: PAGE_SIZE })
-      const list = Array.isArray(data) ? data : []
-      setMovements(list)
-      setPage(nextPage)
-    } catch {} finally {
-      setLoading(false)
-    }
-  }
 
   const loadAccounts = async () => {
     try {
-      const data = await MovementService.listAccounts()
-      setAccounts(Array.isArray(data) ? data : [])
+      const data = await api.get('/accounts?page=1&limit=100', { auth: true })
+      const list = Array.isArray(data) ? data : []
+      setAccounts(list)
+    } catch {}
+  }
+
+  const loadMovements = async (nextPage = 1) => {
+    try {
+      const data = await api.get(`/movements?page=${nextPage}&limit=${PAGE_SIZE}`, { auth: true })
+      const list = Array.isArray(data) ? data : []
+      setMovements(list)
+      setPage(nextPage)
     } catch {}
   }
 
@@ -59,11 +58,11 @@ export default function Movements() {
     if (!createDescription.trim() || createAmount === '' || !createAccountId) return
 
     try {
-      await MovementService.create({
+      await api.post('/movements', {
         accountId: Number(createAccountId),
         description: createDescription.trim(),
-        amount: Number(createAmount),
-      })
+        amount: Number(createAmount)
+      }, { auth: true })
       setCreateDescription('')
       setCreateAmount('')
       setCreateAccountId('')
@@ -76,7 +75,7 @@ export default function Movements() {
     if (!deleteTarget) return
 
     try {
-      await MovementService.remove(deleteTarget.id)
+      await api.delete(`/movements/${deleteTarget.id}`, { auth: true })
       setDeleteTarget(null)
       await loadMovements(1)
     } catch {}
@@ -96,78 +95,111 @@ export default function Movements() {
         <Button onClick={() => setCreateOpen(true)}>Nova movimentação</Button>
       </div>
 
-      <DataTable
-        title="Lista de movimentações"
-        description={summary}
-        columns={[
-          { key: 'description', header: 'Descrição' },
-          { key: 'account', header: 'Conta', render: (movement) => movement.account?.description || '-' },
-          {
-            key: 'amount',
-            header: 'Valor',
-            render: (movement) => (
-              <span className={movement.amount < 0 ? 'text-destructive' : ''}>
-                {formatAmount(movement.amount)}
-              </span>
-            ),
-          },
-          { key: 'createdAt', header: 'Criada em', render: (movement) => <DateDisplay date={movement.createdAt} /> },
-          {
-            key: 'actions',
-            header: 'Ações',
-            align: 'right',
-            render: (movement) => (
-              <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(movement)}>
-                Excluir
-              </Button>
-            ),
-          },
-        ]}
-        data={movements}
-        loading={loading}
-        page={page}
-        pageSize={PAGE_SIZE}
-        hasNext={movements.length >= PAGE_SIZE}
-        emptyMessage="Nenhuma movimentação registrada."
-        onPageChange={loadMovements}
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de movimentações</CardTitle>
+          <CardDescription>{summary}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {movements.length === 0 ? (
+            <p className="text-sm text-slate-500">Nenhuma movimentação registrada.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-slate-500">
+                    <th className="py-2 pr-4">Conta</th>
+                    <th className="py-2 pr-4">Descrição</th>
+                    <th className="py-2 pr-4">Valor</th>
+                    <th className="py-2 pr-4">Criada em</th>
+                    <th className="py-2 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {movements.map((movement) => (
+                    <tr key={movement.id} className="border-b last:border-0">
+                      <td className="py-3 pr-4">{movement.account?.description || '—'}</td>
+                      <td className="py-3 pr-4">{movement.description}</td>
+                      <td className={`py-3 pr-4 ${movement.amount < 0 ? 'text-destructive' : ''}`}>
+                        {formatAmount(movement.amount)}
+                      </td>
+                      <td className="py-3 pr-4"><DateDisplay date={movement.createdAt} /></td>
+                      <td className="py-3 text-right">
+                        <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(movement)}>
+                          Excluir
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => loadMovements(page - 1)}>
+              Anterior
+            </Button>
+            <span className="text-sm text-slate-500">Página {page}</span>
+            <Button variant="outline" size="sm" disabled={movements.length < PAGE_SIZE} onClick={() => loadMovements(page + 1)}>
+              Próxima
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {createOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
             <h2 className="text-lg font-semibold">Nova movimentação</h2>
-            <p className="mt-1 text-sm text-slate-500">Informe a descrição e o valor. Use valores negativos para saídas.</p>
+            <p className="mt-1 text-sm text-slate-500">Informe os dados da movimentação. Use valores negativos para saídas.</p>
             <form onSubmit={handleCreate} className="mt-4 space-y-4">
-              <select
-                value={createAccountId}
-                onChange={(event) => setCreateAccountId(event.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                required
-              >
-                <option value="">Selecione uma conta</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>{account.description}</option>
-                ))}
-              </select>
-              <Input
-                value={createDescription}
-                onChange={(event) => setCreateDescription(event.target.value)}
-                placeholder="Ex.: Salário"
-                required
-              />
-              <Input
-                type="number"
-                step="0.01"
-                value={createAmount}
-                onChange={(event) => setCreateAmount(event.target.value)}
-                placeholder="Ex.: -50.90"
-                required
-              />
+              <div className="space-y-1.5">
+                <Label htmlFor="account">Conta</Label>
+                <select
+                  id="account"
+                  value={createAccountId}
+                  onChange={(event) => setCreateAccountId(event.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  required
+                >
+                  <option value="">Selecione uma conta</option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>{account.description}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="description">Descrição</Label>
+                <Input
+                  id="description"
+                  value={createDescription}
+                  onChange={(event) => setCreateDescription(event.target.value)}
+                  placeholder="Ex.: Salário"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="amount">Valor</Label>
+                <NumericFormat
+                  id="amount"
+                  customInput={Input}
+                  thousandSeparator=""
+                  decimalSeparator=","
+                  decimalScale={2}
+                  fixedDecimalScale
+                  prefix="R$ "
+                  placeholder="R$ 0,00"
+                  value={createAmount}
+                  onValueChange={(values) => setCreateAmount(values.value)}
+                  required
+                />
+              </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={accounts.length === 0}>
+                <Button type="submit">
                   Criar movimentação
                 </Button>
               </div>

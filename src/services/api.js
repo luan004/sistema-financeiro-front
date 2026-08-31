@@ -1,7 +1,7 @@
 import { toast } from 'sonner'
 import { ApiError } from './ApiError'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+const API_BASE_URL = 'http://localhost:8080'
 
 const AUTH_EXCLUDED_PATHS = ['/login']
 
