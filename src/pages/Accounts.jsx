@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { NumericFormat } from 'react-number-format'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DateDisplay } from '@/components/common/DateDisplay'
@@ -81,6 +82,22 @@ export default function Accounts() {
         description={summary}
         columns={[
           { key: 'description', header: 'Descrição' },
+          {
+            key: 'balance',
+            header: 'Saldo',
+            render: (account) => (
+              <NumericFormat
+                value={account.balance}
+                displayType="text"
+                thousandSeparator=""
+                decimalSeparator=","
+                decimalScale={2}
+                fixedDecimalScale
+                prefix="R$ "
+                className={account.balance < 0 ? 'text-destructive' : ''}
+              />
+            ),
+          },
           { key: 'createdAt', header: 'Criada em', render: (account) => <DateDisplay date={account.createdAt} /> },
           {
             key: 'actions',
