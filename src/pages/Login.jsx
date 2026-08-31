@@ -19,13 +19,15 @@ import {
 } from '@/components/ui/field'
 
 import { useSession } from '../context/SessionContext'
-import { api } from '../services/api'
+import { AuthService } from '../services/AuthService'
 
 export default function Login() {
   const navigate = useNavigate()
   const { session, login } = useSession()
-  const [formData, setFormData] = useState({ mail: '', password: '' })
-  const [loading, setLoading] = useState(false)
+  const [loginData, setLoginData] = useState({ mail: '', password: '' })
+  const [registerData, setRegisterData] = useState({ name: '', email: '', password: '' })
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [registerLoading, setRegisterLoading] = useState(false)
 
   useEffect(() => {
     if (session?.token) {
@@ -33,75 +35,144 @@ export default function Login() {
     }
   }, [session, navigate])
 
-  const handleSubmit = async (event) => {
+  const handleLogin = async (event) => {
     event.preventDefault()
-    setLoading(true)
+    setLoginLoading(true)
 
     try {
-      const data = await api.post('/login', {
-        mail: formData.mail,
-        password: formData.password,
-      })
+      const data = await AuthService.login(loginData.mail, loginData.password)
 
       login({
         token: data.token,
         userId: data.userId,
-        mail: formData.mail,
+        mail: loginData.mail,
       })
 
-      setFormData({ mail: '', password: '' })
+      setLoginData({ mail: '', password: '' })
       navigate('/dashboard')
     } finally {
-      setLoading(false)
+      setLoginLoading(false)
+    }
+  }
+
+  const handleRegister = async (event) => {
+    event.preventDefault()
+    setRegisterLoading(true)
+
+    try {
+      await AuthService.register(registerData.name, registerData.email, registerData.password)
+
+      setRegisterData({ name: '', email: '', password: '' })
+    } finally {
+      setRegisterLoading(false)
     }
   }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Entrar</CardTitle>
-          <CardDescription>
-            Informe suas credenciais para acessar o sistema.
-          </CardDescription>
-        </CardHeader>
+      <div className="flex w-full max-w-4xl flex-col gap-6 md:flex-row">
+        <Card className="flex-1">
+          <CardHeader>
+            <CardTitle>Entrar</CardTitle>
+            <CardDescription>
+              Informe suas credenciais para acessar o sistema.
+            </CardDescription>
+          </CardHeader>
 
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <FieldSet>
-              <Field>
-                <FieldLabel>E-mail</FieldLabel>
-                <FieldContent>
-                  <Input
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={formData.mail}
-                    onChange={(event) => setFormData({ ...formData, mail: event.target.value })}
-                    required
-                  />
-                </FieldContent>
-              </Field>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <FieldSet>
+                <Field>
+                  <FieldLabel>E-mail</FieldLabel>
+                  <FieldContent>
+                    <Input
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={loginData.mail}
+                      onChange={(event) => setLoginData({ ...loginData, mail: event.target.value })}
+                      required
+                    />
+                  </FieldContent>
+                </Field>
 
-              <Field>
-                <FieldLabel>Senha</FieldLabel>
-                <FieldContent>
-                  <Input
-                    type="password"
-                    placeholder="Digite sua senha"
-                    value={formData.password}
-                    onChange={(event) => setFormData({ ...formData, password: event.target.value })}
-                    required
-                  />
-                </FieldContent>
-              </Field>
+                <Field>
+                  <FieldLabel>Senha</FieldLabel>
+                  <FieldContent>
+                    <Input
+                      type="password"
+                      placeholder="Digite sua senha"
+                      value={loginData.password}
+                      onChange={(event) => setLoginData({ ...loginData, password: event.target.value })}
+                      required
+                    />
+                  </FieldContent>
+                </Field>
 
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? 'Entrando...' : 'Entrar'}
-              </Button>
-            </FieldSet>
-          </form>
-        </CardContent>
-      </Card>
+                <Button type="submit" disabled={loginLoading} className="w-full">
+                  {loginLoading ? 'Entrando...' : 'Entrar'}
+                </Button>
+              </FieldSet>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card className="flex-1">
+          <CardHeader>
+            <CardTitle>Criar conta</CardTitle>
+            <CardDescription>
+              Preencha os dados abaixo para se cadastrar.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <form onSubmit={handleRegister} className="space-y-4">
+              <FieldSet>
+                <Field>
+                  <FieldLabel>Nome</FieldLabel>
+                  <FieldContent>
+                    <Input
+                      placeholder="Seu nome"
+                      value={registerData.name}
+                      onChange={(event) => setRegisterData({ ...registerData, name: event.target.value })}
+                      required
+                    />
+                  </FieldContent>
+                </Field>
+
+                <Field>
+                  <FieldLabel>E-mail</FieldLabel>
+                  <FieldContent>
+                    <Input
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={registerData.email}
+                      onChange={(event) => setRegisterData({ ...registerData, email: event.target.value })}
+                      required
+                    />
+                  </FieldContent>
+                </Field>
+
+                <Field>
+                  <FieldLabel>Senha</FieldLabel>
+                  <FieldContent>
+                    <Input
+                      type="password"
+                      placeholder="Crie uma senha"
+                      value={registerData.password}
+                      onChange={(event) => setRegisterData({ ...registerData, password: event.target.value })}
+                      required
+                    />
+                  </FieldContent>
+                </Field>
+
+                <Button type="submit" disabled={registerLoading} className="w-full">
+                  {registerLoading ? 'Cadastrando...' : 'Cadastrar'}
+                </Button>
+              </FieldSet>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </main>
   )
 }
